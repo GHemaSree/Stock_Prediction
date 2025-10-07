@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.env
+.venv/
+venv/
+.envrc
+
+# Data & caches
+cache/
+logs/
+plots/
+data/
+
+# Models and large artifacts
+models/
+# If you want models tracked with Git LFS instead, remove the line above and use LFS.
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+vscode/
+.idea/
+
+# Node/Frontend (FinSight)
+FinSight/backend/node_modules/
+FinSight/backend/.env
+FinSight/finsight-stock-vision-main/node_modules/
+FinSight/finsight-stock-vision-main/dist/
+FinSight/finsight-stock-vision-main/.env*
+
+# Jupyter
+.ipynb_checkpoints/

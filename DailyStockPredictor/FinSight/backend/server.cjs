@@ -16,13 +16,15 @@ app.use("/api", authRoutes);
 app.use("/api", predictionsRoutes);
 
 // Connect to DB
-    const mongoURI = 'mongodb+srv://praneethkallam:Kmit123$@cluster0.hyhjf2f.mongodb.net/sdc_project?retryWrites=true&w=majority&appName=Cluster0';
-    mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-      .then(() => console.log('MongoDB connected to sdc_project'))
-      .catch((err) => console.error('MongoDB connection error:', err));
+const mongoURI = process.env.MONGO_URI;
+if (!mongoURI) {
+  console.error("MONGO_URI is not set. Add it to FinSight/backend/.env");
+  process.exit(1);
+}
+mongoose
+  .connect(mongoURI)
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 // Start server
 const PORT = process.env.PORT || 5000;

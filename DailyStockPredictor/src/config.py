@@ -1,8 +1,9 @@
 import os
 from datetime import date
+from pathlib import Path
 
 # Base project directory (update only if you move the project)
-PROJECT_DIR = r"C:\Users\hemas\Hemasree\DailyStockPredictor"
+PROJECT_DIR = str(Path(__file__).resolve().parent.parent)
 DATA_DIR = os.path.join(PROJECT_DIR, "data")
 CACHE_DIR = os.path.join(PROJECT_DIR, "cache")
 MODELS_DIR = os.path.join(PROJECT_DIR, "models")

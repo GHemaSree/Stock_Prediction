@@ -1,6 +1,6 @@
 # DailyStockPredictor
 
-Path: `C:\Users\hemas\Hemasree\DailyStockPredictor\`
+Project path: `<path-to-repo>\\DailyStockPredictor\\`
 
 This project runs daily stock trading signals using your trained Transformer + PPO models, including daily news sentiment. Outputs a CSV of Buy/Sell/Hold per ticker each day under `logs/`.
 
@@ -59,9 +59,9 @@ On success, check `logs/YYYY-MM-DD_signals.csv`.
 2. Name: DailyStockPredictor
 3. Trigger: Daily (choose time after market close)
 4. Action: Start a program
-   - Program/script: `C:\Users\hemas\Hemasree\DailyStockPredictor\.venv\Scripts\python.exe`
-   - Add arguments: `C:\Users\hemas\Hemasree\DailyStockPredictor\daily_predict.py`
-   - Start in: `C:\Users\hemas\Hemasree\DailyStockPredictor\`
+   - Program/script: `<path-to-repo>\\DailyStockPredictor\\.venv\\Scripts\\python.exe` (or your system Python)
+   - Add arguments: `<path-to-repo>\\DailyStockPredictor\\daily_predict.py`
+   - Start in: `<path-to-repo>\\DailyStockPredictor\\`
 5. Finish.
 
 Note: If you don't use a venv, point to your system `python.exe` and ensure `requirements.txt` are installed globally.
@@ -72,6 +72,8 @@ Edit `src/config.py`:
 - `CONFIG["features"]`: must match features used in training (already seeded from your notebook).
 - `CONFIG["seq_len"]`: must match what PPO expects.
 - `CONFIG["news_csv"]`: path to your news file (defaults to `data/Combined_News_DJIA.csv`).
+
+Note: `src/config.py` now derives `PROJECT_DIR` from the file location, so paths like `data/`, `logs/`, `models/` are relative to the repository and work for any user without editing absolute paths.
 
 ## Troubleshooting
 - Missing scaler error: Copy `models/scaler_{TICKER}.pkl` from notebook output.

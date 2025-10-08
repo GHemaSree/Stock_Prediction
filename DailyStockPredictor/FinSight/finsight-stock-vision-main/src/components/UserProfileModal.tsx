@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useState } from "react";
+ 
+ 
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -23,30 +23,16 @@ interface UserProfileModalProps {
 
 const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
   const navigate = useNavigate();
-  const { user, signOut, token } = useAuth();
+  const { signOut } = useAuth();
   const { orders } = useOrders();
   const { toast } = useToast();
 
-  const [profile, setProfile] = useState<any>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
+  const formatCurrency = (symbol: string, price: any) => {
+    const isIN = /\.(NS|BO)$/i.test(symbol || '');
+    const n = typeof price === 'number' ? price : parseFloat(price ?? '');
+    return Number.isFinite(n) ? `${isIN ? '₹' : '$'}${n.toFixed(2)}` : '-';
+  };
 
-  useEffect(() => {
-    if (!isOpen || !token) return;
-    setLoadingProfile(true);
-  fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/profile`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => setProfile(data))
-      .catch(() => toast({
-        title: "Error loading profile",
-        description: "Could not fetch user info.",
-        variant: "destructive",
-      }))
-      .finally(() => setLoadingProfile(false));
-  }, [isOpen, token, toast]);
 
   const handleLogout = async () => {
     await signOut();
@@ -55,33 +41,7 @@ const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
     navigate("/login");
   };
 
-  const handleRemoveFromWatchlist = async (symbol: string) => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/watchlist/${symbol}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        setProfile((prev: any) => ({
-          ...prev,
-          watchlist: prev.watchlist.filter((s: string) => s !== symbol),
-        }));
-        toast({
-          title: "Removed from watchlist",
-          description: `${symbol} removed successfully`,
-          variant: "default",
-        });
-      }
-    } catch {
-      toast({
-        title: "Error",
-        description: "Could not remove from watchlist",
-        variant: "destructive",
-      });
-    }
-  };
+  // Watchlist feature removed
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -97,55 +57,9 @@ const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* User Info */}
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Account Information</h3>
-            <div className="bg-muted/50 p-4 rounded-lg">
-              {loadingProfile ? (
-                <p>Loading...</p>
-              ) : profile ? (
-                <>
-                  <p className="font-medium text-lg">{profile.full_name}</p>
-                  <p className="text-muted-foreground">{profile.email}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Member since {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Date of Birth: {profile.dob ? new Date(profile.dob).toLocaleDateString() : 'N/A'}
-                  </p>
-                </>
-              ) : (
-                <p className="text-muted-foreground">No user info available.</p>
-              )}
-            </div>
-          </div>
+          {/* Account Information removed */}
 
-          <Separator />
-
-          {/* Watchlist */}
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Watchlist</h3>
-            <div className="bg-muted/50 p-4 rounded-lg">
-              {profile?.watchlist?.length ? (
-                profile.watchlist.map((symbol: string) => (
-                  <div key={symbol} className="flex items-center justify-between mb-2">
-                    <span>{symbol}</span>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleRemoveFromWatchlist(symbol)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-muted-foreground">No stocks in watchlist.</p>
-              )}
-            </div>
-          </div>
-
-          <Separator />
+          {/* Watchlist section removed */}
 
           {/* Recent Orders */}
           <div className="space-y-3">
@@ -185,7 +99,7 @@ const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
                             {order.type}
                           </Badge>
                           <p className="text-sm font-semibold">{order.quantity} shares</p>
-                          <p className="text-sm text-muted-foreground">{order.price}</p>
+                          <p className="text-sm text-muted-foreground">{formatCurrency(order.symbol, order.price)}</p>
                         </div>
                       </div>
                     </div>

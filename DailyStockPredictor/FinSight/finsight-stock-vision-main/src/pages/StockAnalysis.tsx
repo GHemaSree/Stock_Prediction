@@ -9,12 +9,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { useOrders } from "@/contexts/OrderContext";
 import { stocksData } from "@/data/stockData";
 import SignalsSummary from "@/components/SignalsSummary";
-import { useAuth } from "@/contexts/AuthContext";
+ 
 
 const StockAnalysis = () => {
   const { symbol } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
   const { toast } = useToast();
   const { addOrder } = useOrders();
 
@@ -221,12 +220,16 @@ const StockAnalysis = () => {
   const handleAction = (action: 'BUY' | 'SELL') => {
     if (!stock) return;
     
+    const latestNumericPrice = Number.isFinite(toNum(latest?.Price)) ? toNum(latest?.Price) : null;
+    const orderPriceStr = latestNumericPrice != null
+      ? `${currency}${latestNumericPrice.toFixed(2)}`
+      : String(stock.price);
     addOrder({
       symbol: stock.symbol,
       name: stock.name,
       type: action,
       quantity: 1,
-      price: stock.price,
+      price: orderPriceStr,
     });
     
     toast({
@@ -236,35 +239,7 @@ const StockAnalysis = () => {
   };
 
   const handleAddToWatchlist = async () => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/watchlist`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ symbol: stock.symbol }),
-      });
-      if (res.ok) {
-        toast({
-          title: "Added successfully",
-          description: "Check your profile",
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Could not add to watchlist",
-          variant: "destructive",
-        });
-      }
-    } catch {
-      toast({
-        title: "Error",
-        description: "Could not add to watchlist",
-        variant: "destructive",
-      });
-    }
+    // watchlist feature removed
   };
 
   const getActionButtons = () => {
@@ -277,13 +252,6 @@ const StockAnalysis = () => {
         <Button className="w-full" variant="destructive" onClick={() => handleAction("SELL")}>
           <TrendingDown className="h-4 w-4 mr-2" />
           Sell Stock
-        </Button>
-        <Button
-          className="w-full mt-2"
-          variant="secondary"
-          onClick={handleAddToWatchlist}
-        >
-          Add to Watchlist
         </Button>
       </div>
     );
@@ -421,10 +389,10 @@ const StockAnalysis = () => {
               <CardContent className="space-y-4">
                 <div className="text-center">
                   <Badge 
-                    variant={stock.prediction === "BUY" ? "default" : stock.prediction === "SELL" ? "destructive" : "secondary"}
+                    variant={stats?.signal === "BUY" ? "default" : stats?.signal === "SELL" ? "destructive" : "secondary"}
                     className="text-lg px-6 py-2"
                   >
-                    {stock.prediction}
+                    {stats?.signal || "-"}
                   </Badge>
                 </div>
                 

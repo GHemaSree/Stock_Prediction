@@ -10,7 +10,13 @@ import pandas as pd
 from src.config import CONFIG, MODELS_DIR, CACHE_DIR, LOGS_DIR
 from src.features import fetch_prices, compute_indicators, align_and_merge_sentiment, make_last_window
 from src.sentiment import read_news_csv, compute_daily_sentiment
-from src.model_loader import load_scaler, load_transformer, transformer_prob_up, load_ppo, ppo_decide_action
+from src.model_loader import (
+    load_scaler,
+    load_transformer,
+    transformer_prob_up,
+    load_ppo,
+    ppo_decide_action,
+)
 
 
 def log(msg: str):
@@ -97,6 +103,7 @@ def main():
             # 6) Build PPO observation and decide action
             obs_vec = np.concatenate([last_win.flatten(), np.array([prob_up], dtype=np.float32)])
             ppo, ppo_path = load_ppo(MODELS_DIR, ticker)
+            # Deterministic action for production signal
             action, _ = ppo_decide_action(ppo, obs_vec)
             signal = map_action_to_signal(action)
 
@@ -131,6 +138,8 @@ def main():
                 "Vol_norm": round(vol_norm, 3) if vol_norm is not None and not np.isnan(vol_norm) else "",
             })
             log(f"{ticker}: ProbUp={prob_up:.3f} -> {signal}")
+
+            # No testing debug collection in normal mode
         except Exception as e:
             log(f"[ERROR] {ticker}: {e}")
             traceback.print_exc()
@@ -159,6 +168,8 @@ def main():
             log(f"Created cumulative signals at: {out_path}")
     else:
         log("No results to log.")
+
+    # No debug diagnostics in normal mode
 
 
 if __name__ == "__main__":

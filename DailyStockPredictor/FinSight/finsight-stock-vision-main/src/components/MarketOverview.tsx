@@ -63,18 +63,24 @@ export default function MarketOverview() {
   if (loading) return <div className="text-sm text-muted-foreground">Loading market overview...</div>;
   if (error) return <div className="text-sm text-destructive">{error}</div>;
 
-  const Row = (x: LatestPredictionItem) => (
-    <div key={x.ticker} className="flex justify-between items-center p-3 rounded-lg hover:bg-muted/50 cursor-pointer" onClick={() => navigate(`/stock/${x.ticker}`)}>
-      <div>
-        <div className="font-medium">{x.ticker}</div>
-        <div className="text-sm text-muted-foreground">{x.signal || 'HOLD'}</div>
+  const Row = (x: LatestPredictionItem) => {
+    const isIN = /\.(NS|BO)$/i.test(x.ticker || '');
+    const currency = isIN ? '₹' : '$';
+    const priceStr = typeof x.price === 'number' ? `${currency}${x.price.toFixed(2)}` : '-';
+    const changeClass = typeof x.changePct === 'number' && x.changePct >= 0 ? 'text-gain' : 'text-loss';
+    return (
+      <div key={x.ticker} className="flex justify-between items-center p-3 rounded-lg hover:bg-muted/50 cursor-pointer" onClick={() => navigate(`/stock/${x.ticker}`)}>
+        <div>
+          <div className="font-medium">{x.ticker}</div>
+          <div className="text-sm text-muted-foreground">{x.signal || 'HOLD'}</div>
+        </div>
+        <div className="text-right">
+          <div className="font-medium">{priceStr}</div>
+          <div className={`text-sm ${changeClass}`}>{x.changeFmt ?? '-'}</div>
+        </div>
       </div>
-      <div className="text-right">
-        <div className="font-medium">{typeof x.price === 'number' ? x.price.toFixed(2) : '-'}</div>
-        <div className={`text-sm ${typeof x.changePct === 'number' && x.changePct >= 0 ? 'text-gain' : 'text-loss'}`}>{x.changeFmt ?? '-'}</div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

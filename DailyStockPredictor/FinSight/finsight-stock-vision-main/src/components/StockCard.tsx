@@ -29,7 +29,8 @@ const StockCard = ({ stock }: StockCardProps) => {
       case "SELL":
         return "bg-loss hover:bg-loss/90 text-white";
       default:
-        return "bg-secondary hover:bg-secondary/90";
+        // HOLD
+        return "bg-muted-foreground hover:bg-muted-foreground/90 text-background";
     }
   };
 

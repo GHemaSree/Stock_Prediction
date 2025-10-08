@@ -4,6 +4,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const authRoutes = require("./routes/auth.cjs");
 const predictionsRoutes = require("./routes/predictions.cjs");
+const signalsRoutes = require("./routes/signals.cjs");
 
 dotenv.config();
 const app = express();
@@ -14,6 +15,7 @@ app.use(cors());
 // Routes
 app.use("/api", authRoutes);
 app.use("/api", predictionsRoutes);
+app.use("/api", signalsRoutes);
 
 // Connect to DB
 const mongoURI = process.env.MONGO_URI;

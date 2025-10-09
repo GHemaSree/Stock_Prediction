@@ -5,6 +5,7 @@ const dotenv = require("dotenv");
 const authRoutes = require("./routes/auth.cjs");
 const predictionsRoutes = require("./routes/predictions.cjs");
 const signalsRoutes = require("./routes/signals.cjs");
+const ordersRoutes = require("./routes/orders.cjs");
 
 dotenv.config();
 const app = express();
@@ -16,6 +17,7 @@ app.use(cors());
 app.use("/api", authRoutes);
 app.use("/api", predictionsRoutes);
 app.use("/api", signalsRoutes);
+app.use("/api", ordersRoutes);
 
 // Connect to DB
 const mongoURI = process.env.MONGO_URI;

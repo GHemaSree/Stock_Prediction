@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useOrders } from './OrderContext';
 
 interface User {
@@ -85,7 +85,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setToken(null);
     clearOrders();
+    try {
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('auth_token');
+    } catch {}
   };
+
+  // Rehydrate from localStorage on mount
+  useEffect(() => {
+    try {
+      const u = localStorage.getItem('auth_user');
+      const t = localStorage.getItem('auth_token');
+      if (u && t) {
+        setUser(JSON.parse(u));
+        setToken(t);
+      }
+    } catch {}
+    // no explicit loading flag here; we keep it simple
+  }, []);
 
   const value = {
     user,

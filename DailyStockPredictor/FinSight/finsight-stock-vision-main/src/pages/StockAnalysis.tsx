@@ -6,16 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
-import { useOrders } from "@/contexts/OrderContext";
 import { stocksData } from "@/data/stockData";
 import SignalsSummary from "@/components/SignalsSummary";
+import { useAuth } from "@/contexts/AuthContext";
  
 
 const StockAnalysis = () => {
   const { symbol } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addOrder } = useOrders();
+  const { user } = useAuth();
 
   const stock = stocksData[symbol as keyof typeof stocksData];
   const isIN = /\.(NS|BO)$/i.test((stock?.symbol || symbol || '').toString());
@@ -217,25 +217,42 @@ const StockAnalysis = () => {
     );
   }
 
-  const handleAction = (action: 'BUY' | 'SELL') => {
+  const handleAction = async (action: 'BUY' | 'SELL') => {
     if (!stock) return;
+    if (!user?.email) {
+      toast({ title: 'Login required', description: 'Please log in to place an order.', variant: 'destructive' });
+      return;
+    }
     
     const latestNumericPrice = Number.isFinite(toNum(latest?.Price)) ? toNum(latest?.Price) : null;
-    const orderPriceStr = latestNumericPrice != null
-      ? `${currency}${latestNumericPrice.toFixed(2)}`
-      : String(stock.price);
-    addOrder({
-      symbol: stock.symbol,
-      name: stock.name,
-      type: action,
-      quantity: 1,
-      price: orderPriceStr,
-    });
-    
-    toast({
-      title: `${action} Order Placed`,
-      description: `Your ${action.toLowerCase()} order for ${symbol} has been submitted.`,
-    });
+    const orderPriceStr = latestNumericPrice != null ? `${currency}${latestNumericPrice.toFixed(2)}` : String(stock.price);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.email || undefined,
+          symbol: stock.symbol,
+          name: stock.name,
+          type: action,
+          quantity: 1,
+          price: orderPriceStr,
+          priceNum: latestNumericPrice ?? undefined,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to save order');
+      toast({
+        title: `${action} Order Placed`,
+        description: `Your ${action.toLowerCase()} order for ${symbol} has been submitted.`,
+      });
+    } catch (e: any) {
+      toast({
+        title: 'Order failed',
+        description: e?.message || 'Could not save order',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleAddToWatchlist = async () => {

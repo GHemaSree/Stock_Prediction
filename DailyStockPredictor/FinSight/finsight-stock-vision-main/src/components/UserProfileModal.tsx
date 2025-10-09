@@ -1,5 +1,4 @@
- 
- 
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -13,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { User, LogOut, TrendingUp, TrendingDown, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOrders } from "@/contexts/OrderContext";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserProfileModalProps {
@@ -23,8 +21,7 @@ interface UserProfileModalProps {
 
 const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
-  const { orders } = useOrders();
+  const { user, token, signOut } = useAuth();
   const { toast } = useToast();
 
   const formatCurrency = (symbol: string, price: any) => {
@@ -33,6 +30,43 @@ const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
     return Number.isFinite(n) ? `${isIN ? '₹' : '$'}${n.toFixed(2)}` : '-';
   };
 
+
+  // Profile state
+  const [profile, setProfile] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  // Orders state (from backend)
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  // Load profile on open
+  useEffect(() => {
+    if (!isOpen || !token) return;
+    setLoadingProfile(true);
+    fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setProfile(data))
+      .catch(() =>
+        toast({ title: "Error loading profile", description: "Could not fetch user info.", variant: "destructive" })
+      )
+      .finally(() => setLoadingProfile(false));
+  }, [isOpen, token, toast]);
+
+  // Load orders on open
+  useEffect(() => {
+    if (!isOpen || !user?.email) return;
+    setLoadingOrders(true);
+    const base = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    fetch(`${base}/api/orders?userId=${encodeURIComponent(user.email)}`)
+      .then((r) => r.json())
+      .then((data) => setOrders(Array.isArray(data?.items) ? data.items : []))
+      .catch(() =>
+        toast({ title: "Error loading orders", description: "Could not fetch your orders.", variant: "destructive" })
+      )
+      .finally(() => setLoadingOrders(false));
+  }, [isOpen, user?.email, toast]);
 
   const handleLogout = async () => {
     await signOut();
@@ -57,18 +91,41 @@ const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Account Information removed */}
+          {/* Account Information */}
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Account Information</h3>
+            <div className="bg-muted/50 p-4 rounded-lg">
+              {loadingProfile ? (
+                <p>Loading...</p>
+              ) : profile ? (
+                <>
+                  <p className="font-medium text-lg">{profile.full_name}</p>
+                  <p className="text-muted-foreground">{profile.email}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Member since {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Date of Birth: {profile.dob ? new Date(profile.dob).toLocaleDateString() : 'N/A'}
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground">No user info available.</p>
+              )}
+            </div>
+          </div>
 
           {/* Watchlist section removed */}
 
-          {/* Recent Orders */}
+          {/* Recent Orders (from backend) */}
           <div className="space-y-3">
             <h3 className="text-lg font-semibold flex items-center">
               <ShoppingCart className="h-5 w-5 mr-2" />
               Recent Orders
             </h3>
             <div className="space-y-3 max-h-60 overflow-y-auto">
-              {orders && orders.length === 0 ? (
+              {loadingOrders ? (
+                <div className="text-muted-foreground">Loading orders…</div>
+              ) : orders && orders.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <ShoppingCart className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No orders placed yet</p>
@@ -76,14 +133,14 @@ const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
                 </div>
               ) : (
                 <>
-                  {orders && orders.slice(0, 10).map((order: any) => (
-                    <div key={order.id} className="p-4 border rounded-lg">
+                  {orders && orders.slice(0, 10).map((order: any, idx: number) => (
+                    <div key={order._id || idx} className="p-4 border rounded-lg">
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <h4 className="font-semibold">{order.symbol}</h4>
                           <p className="text-sm text-muted-foreground">{order.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(order.timestamp).toLocaleDateString()} {new Date(order.timestamp).toLocaleTimeString()}
+                            {order.timestamp ? new Date(order.timestamp).toLocaleDateString() : ''} {order.timestamp ? new Date(order.timestamp).toLocaleTimeString() : ''}
                           </p>
                         </div>
                         <div className="text-right">
@@ -99,7 +156,7 @@ const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
                             {order.type}
                           </Badge>
                           <p className="text-sm font-semibold">{order.quantity} shares</p>
-                          <p className="text-sm text-muted-foreground">{formatCurrency(order.symbol, order.price)}</p>
+                          <p className="text-sm text-muted-foreground">{order.price ? order.price : formatCurrency(order.symbol, order.priceNum)}</p>
                         </div>
                       </div>
                     </div>

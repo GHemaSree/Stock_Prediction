@@ -56,6 +56,23 @@ def map_action_to_signal(a: int) -> str:
     return {0: "HOLD", 1: "BUY", 2: "SELL"}.get(a, "HOLD")
 
 
+def prob_to_signal(prob_up: float) -> str:
+    """Threshold-mapped signal from Transformer probability.
+    BUY: prob_up >= 0.50
+    HOLD: 0.45 <= prob_up < 0.50
+    SELL: prob_up < 0.45
+    """
+    try:
+        p = float(prob_up)
+    except Exception:
+        return "HOLD"
+    if p >= 0.50:
+        return "BUY"
+    if p < 0.45:
+        return "SELL"
+    return "HOLD"
+
+
 def main():
     tickers = CONFIG["tickers"]
     seq_len = CONFIG["seq_len"]
@@ -68,6 +85,7 @@ def main():
     end_date = today
 
     results = []
+    ppo_rows = []  # collect PPO diagnostics for separate file
 
     for ticker in tickers:
         try:
@@ -105,7 +123,10 @@ def main():
             ppo, ppo_path = load_ppo(MODELS_DIR, ticker)
             # Deterministic action for production signal
             action, _ = ppo_decide_action(ppo, obs_vec)
-            signal = map_action_to_signal(action)
+            ppo_signal = map_action_to_signal(action)
+
+            # Threshold-based signal (used as primary Signal)
+            signal = prob_to_signal(prob_up)
 
             # 6b) Price info (use latest row from features)
             try:
@@ -130,14 +151,25 @@ def main():
                 "Date": end_date.isoformat(),
                 "Ticker": ticker,
                 "ProbUp": round(float(prob_up), 6),
+                # Keep original action for compatibility
                 "Action": int(action),
+                # Primary display signal mapped by probability thresholds
                 "Signal": signal,
                 "Price": round(latest_close, 2) if latest_close is not None else "",
                 "ChangePct": round(change_pct, 2) if change_pct is not None else "",
                 "Volume": int(latest_volume) if latest_volume is not None and not np.isnan(latest_volume) else "",
                 "Vol_norm": round(vol_norm, 3) if vol_norm is not None and not np.isnan(vol_norm) else "",
             })
-            log(f"{ticker}: ProbUp={prob_up:.3f} -> {signal}")
+            # collect PPO diagnostics (written to logs/ppo_<date>.csv later)
+            ppo_rows.append({
+                "Date": end_date.isoformat(),
+                "Ticker": ticker,
+                "PPO_Action": int(action),
+                "PPO_Signal": ppo_signal,
+                "ProbUp": round(float(prob_up), 6),
+            })
+            # console log without PPO details
+            log(f"{ticker}: ProbUp={prob_up:.3f} -> Signal={signal}")
 
             # No testing debug collection in normal mode
         except Exception as e:
@@ -155,21 +187,33 @@ def main():
                 combined = pd.concat([existing, today_df], ignore_index=True)
                 # De-duplicate by Date+Ticker, keep latest
                 combined = combined.drop_duplicates(subset=["Date", "Ticker"], keep="last")
+                # Remove any PPO diagnostic columns from cumulative signals
+                combined = combined.drop(columns=["PPO_Action", "PPO_Signal"], errors="ignore")
                 # Sort for readability
                 combined = combined.sort_values(["Date", "Ticker"]).reset_index(drop=True)
                 combined.to_csv(out_path, index=False)
                 log(f"Updated cumulative signals at: {out_path}")
             except Exception:
                 # Fallback: write today's only to ensure we don't lose output
+                today_df = today_df.drop(columns=["PPO_Action", "PPO_Signal"], errors="ignore")
                 today_df.to_csv(out_path, index=False)
                 log(f"Rewrote cumulative signals (fallback) at: {out_path}")
         else:
+            today_df = today_df.drop(columns=["PPO_Action", "PPO_Signal"], errors="ignore")
             today_df.to_csv(out_path, index=False)
-            log(f"Created cumulative signals at: {out_path}")
+            log("Created cumulative signals at: {out_path}")
     else:
         log("No results to log.")
 
-    # No debug diagnostics in normal mode
+    # Write PPO diagnostics to a per-day file (no console spam)
+    try:
+        if ppo_rows:
+            os.makedirs(LOGS_DIR, exist_ok=True)
+            ppo_path = os.path.join(LOGS_DIR, f"ppo_{end_date.isoformat()}.csv")
+            pd.DataFrame(ppo_rows).to_csv(ppo_path, index=False)
+            log(f"Wrote PPO diagnostics to: {ppo_path}")
+    except Exception as e:
+        log(f"[WARN] Failed writing PPO diagnostics: {e}")
 
 
 if __name__ == "__main__":
